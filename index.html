@@ -108,6 +108,19 @@ tbody tr:hover td{background:#F8F9FF}
 .empty{text-align:center;padding:48px 20px;color:#9CA3AF;font-size:13px}
 .empty-icon{font-size:36px;margin-bottom:10px}
 
+/* ── Photo ── */
+.thumb{width:80px;height:80px;object-fit:cover;border-radius:6px;border:1px solid #E5E7EB;display:block}
+.thumb-empty{width:80px;height:80px;border-radius:6px;border:2px dashed #E5E7EB;display:flex;align-items:center;justify-content:center;color:#D1D5DB;font-size:20px;cursor:pointer;background:#FAFAFA}
+.thumb-empty:hover{border-color:#0432FF;color:#0432FF;background:#F0F2FF}
+.photo-preview-wrap{position:relative;display:inline-block}
+.photo-preview-wrap img{width:100px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #E5E7EB}
+.photo-clear{position:absolute;top:-6px;right:-6px;background:#EF4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* ── Inline edit ── */
+.editable{border:1px solid transparent;border-radius:4px;padding:3px 6px;font-family:'Pretendard',sans-serif;font-size:13px;background:transparent;width:100%;outline:none;color:#111}
+.editable:hover{border-color:#E5E7EB;background:#F9FAFB}
+.editable:focus{border-color:#0432FF;background:#fff;box-shadow:0 0 0 2px rgba(4,50,255,.08)}
+
 /* ── Filter bar ── */
 .filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .filter-bar .form-input,.filter-bar .form-select{flex:1;min-width:130px;max-width:220px}
@@ -192,7 +205,7 @@ tbody tr:hover td{background:#F8F9FF}
       <div class="tbl-wrap">
         <table id="dash-table">
           <thead><tr>
-            <th>IP</th><th>제품명</th><th class="ta-c">초기재고</th>
+            <th>IP</th><th class="ta-c">사진</th><th>제품명</th><th class="ta-c">초기재고</th>
             <th class="ta-c">판매수량</th><th class="ta-c">현재재고</th>
             <th class="ta-r">소비자가</th><th class="ta-r">재고금액</th><th class="ta-c">상태</th>
           </tr></thead>
@@ -325,6 +338,19 @@ tbody tr:hover td{background:#F8F9FF}
     <input type="hidden" id="item-ipid">
     <input type="hidden" id="item-edit-id">
     <div class="form-grid">
+      <!-- 사진 업로드 -->
+      <div class="form-group">
+        <label class="form-label">제품 사진</label>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div id="item-photo-preview" style="display:none" class="photo-preview-wrap">
+            <img id="item-photo-img" src="" alt="preview">
+            <button class="photo-clear" onclick="clearPhoto()" title="사진 삭제">✕</button>
+          </div>
+          <div id="item-photo-empty" class="thumb-empty" onclick="$('item-photo-file').click()" title="사진 추가">＋</div>
+          <input type="file" id="item-photo-file" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+          <div style="font-size:11px;color:#9CA3AF;line-height:1.6">이미지 파일을 선택하세요.<br>JPG, PNG, WEBP 지원</div>
+        </div>
+      </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">제품명</label>
@@ -582,7 +608,7 @@ function renderDashTable() {
   });
 
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty">해당하는 제품이 없습니다.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">해당하는 제품이 없습니다.</td></tr>';
     return;
   }
 
@@ -595,10 +621,17 @@ function renderDashTable() {
     const badge  = st === 'ok' ? 'badge-ok' : st === 'warn' ? 'badge-warn' : 'badge-danger';
     const label  = st === 'ok' ? '정상' : st === 'warn' ? '주의' : cur <= 0 ? '소진' : '부족';
     const curCls = st === 'ok' ? 'stock-ok' : st === 'warn' ? 'stock-warn' : 'stock-danger';
+    const photoCell = it.photo
+      ? `<img src="${it.photo}" class="thumb" style="margin:4px auto">`
+      : `<div class="thumb-empty" style="margin:4px auto;width:60px;height:60px;font-size:16px">📷</div>`;
     return `<tr>
       <td><span class="badge badge-blue">${ip ? ip.name : it.ipId}</span></td>
-      <td>${it.name}${it.category ? ` <span style="font-size:11px;color:#9CA3AF">[${it.category}]</span>` : ''}</td>
-      <td class="ta-c">${it.initStock.toLocaleString()}</td>
+      <td class="ta-c" style="padding:6px 10px">${photoCell}</td>
+      <td>
+        <input class="editable" value="${it.name.replace(/"/g,'&quot;')}" onblur="updateField('${it.id}','name',this.value)" style="font-weight:600">
+        ${it.category ? `<div style="font-size:11px;color:#9CA3AF;padding:0 6px">[${it.category}]</div>` : ''}
+      </td>
+      <td class="ta-c"><input class="editable" type="number" value="${it.initStock}" onblur="updateField('${it.id}','initStock',this.value)" style="text-align:center;width:70px"></td>
       <td class="ta-c">${sold.toLocaleString()}</td>
       <td class="ta-c ${curCls}">${cur.toLocaleString()}</td>
       <td class="ta-r">${won(it.price)}</td>
@@ -654,7 +687,7 @@ function renderIPContent() {
         <div class="tbl-wrap">
           <table>
             <thead><tr>
-              <th>카테고리</th><th>제품명</th>
+              <th>카테고리</th><th class="ta-c">사진</th><th>제품명</th>
               <th class="ta-c">초기재고</th><th class="ta-c">판매수량</th>
               <th class="ta-c">현재재고</th><th class="ta-r">소비자가</th>
               <th class="ta-r">재고금액</th><th class="ta-c">상태</th><th></th>
@@ -666,22 +699,27 @@ function renderIPContent() {
               const badge = st==='ok'?'badge-ok':st==='warn'?'badge-warn':'badge-danger';
               const label = st==='ok'?'정상':st==='warn'?'주의':cur<=0?'소진':'부족';
               const curCls = st==='ok'?'stock-ok':st==='warn'?'stock-warn':'stock-danger';
+              const photoCell = it.photo
+                ? `<img src="${it.photo}" class="thumb" style="margin:4px auto">`
+                : `<div class="thumb-empty" onclick="openItemEdit('${it.id}')" style="margin:4px auto;width:80px;height:80px;font-size:18px" title="클릭해서 사진 추가">＋</div>`;
               return `<tr>
                 <td><span style="font-size:11px;color:#6B7280">${it.category||'-'}</span></td>
-                <td style="font-weight:600">${it.name}</td>
-                <td class="ta-c">${it.initStock.toLocaleString()}</td>
+                <td class="ta-c" style="padding:6px 10px">${photoCell}</td>
+                <td>
+                  <input class="editable" value="${it.name.replace(/"/g,'&quot;')}" onblur="updateField('${it.id}','name',this.value)" style="font-weight:600;min-width:160px">
+                </td>
+                <td class="ta-c"><input class="editable" type="number" value="${it.initStock}" onblur="updateField('${it.id}','initStock',this.value)" style="text-align:center;width:70px"></td>
                 <td class="ta-c">${sold.toLocaleString()}</td>
                 <td class="ta-c ${curCls}">${cur.toLocaleString()}</td>
                 <td class="ta-r">${won(it.price)}</td>
                 <td class="ta-r">${won(cur*it.price)}</td>
                 <td class="ta-c"><span class="badge ${badge}">${label}</span></td>
                 <td class="ta-c" style="white-space:nowrap">
-                  <button class="btn btn-gray btn-sm" onclick="openRestock('${it.id}')" style="margin-right:4px">재고수정</button>
                   <button class="btn btn-sm" style="background:#FEF3C7;color:#92400E" onclick="openItemEdit('${it.id}')">수정</button>
                   <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteItem('${it.id}')">삭제</button>
                 </td>
               </tr>`;
-            }).join('') : '<tr><td colspan="9" class="empty">제품을 추가해주세요.</td></tr>'}</tbody>
+            }).join('') : '<tr><td colspan="10" class="empty">제품을 추가해주세요.</td></tr>'}</tbody>
           </table>
         </div>
       </div>
@@ -804,6 +842,30 @@ function deleteIP(id) {
   save(); renderIPMgr();
 }
 
+function setPhotoPreview(src) {
+  if (src) {
+    $('item-photo-img').src = src;
+    $('item-photo-preview').style.display = 'block';
+    $('item-photo-empty').style.display = 'none';
+  } else {
+    $('item-photo-preview').style.display = 'none';
+    $('item-photo-empty').style.display = 'flex';
+    $('item-photo-file').value = '';
+  }
+}
+
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => setPhotoPreview(e.target.result);
+  reader.readAsDataURL(file);
+}
+
+function clearPhoto() {
+  setPhotoPreview(null);
+}
+
 function openItemModal(ipId) {
   $('item-ipid').value = ipId;
   $('item-edit-id').value = '';
@@ -812,6 +874,8 @@ function openItemModal(ipId) {
   $('item-stock').value = '';
   $('item-price').value = '';
   $('item-barcode').value = '';
+  setPhotoPreview(null);
+  $('modal-item').querySelector('.modal-title').textContent = '제품 추가';
   openModal('modal-item');
 }
 
@@ -825,6 +889,8 @@ function openItemEdit(itemId) {
   $('item-stock').value = it.initStock;
   $('item-price').value = it.price;
   $('item-barcode').value = it.barcode||'';
+  setPhotoPreview(it.photo||null);
+  $('modal-item').querySelector('.modal-title').textContent = '제품 수정';
   openModal('modal-item');
 }
 
@@ -836,15 +902,34 @@ function saveItem() {
   const stock   = parseInt($('item-stock').value);
   const price   = parseInt($('item-price').value);
   const barcode = $('item-barcode').value.trim();
+  const photo   = $('item-photo-img').src && $('item-photo-preview').style.display !== 'none'
+                  ? $('item-photo-img').src : '';
   if (!name || isNaN(stock) || isNaN(price)) { alert('제품명, 초기재고, 소비자가를 입력해주세요.'); return; }
 
   if (editId) {
     const it = DB.items.find(x=>x.id===editId);
-    if (it) { it.name=name; it.category=cat; it.initStock=stock; it.price=price; it.barcode=barcode; }
+    if (it) { it.name=name; it.category=cat; it.initStock=stock; it.price=price; it.barcode=barcode; it.photo=photo; }
   } else {
-    DB.items.push({ id:uid(), ipId, name, category:cat, initStock:stock, price, barcode, createdAt:now() });
+    DB.items.push({ id:uid(), ipId, name, category:cat, initStock:stock, price, barcode, photo, createdAt:now() });
   }
-  save(); closeModal('modal-item'); renderIPContent();
+  save(); closeModal('modal-item'); renderIPContent(); renderDashboard();
+}
+
+function updateField(itemId, field, value) {
+  const it = DB.items.find(x=>x.id===itemId);
+  if (!it) return;
+  if (field === 'initStock') {
+    const v = parseInt(value);
+    if (isNaN(v) || v < 0) return;
+    it.initStock = v;
+  } else {
+    const v = value.trim();
+    if (!v) return;
+    it[field] = v;
+  }
+  save();
+  renderDashboard();
+  renderIPContent();
 }
 
 function deleteItem(id) {
