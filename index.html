@@ -385,7 +385,7 @@ tbody tr:hover td{background:#F8F9FF}
 
 <script>
 // ── Storage ───────────────────────────────────────────────────────────────────
-const KEY = 'noa_inv_v1';
+const KEY = 'noa_inv_v2';
 let DB = load();
 
 function load() {
@@ -397,9 +397,8 @@ function save() { localStorage.setItem(KEY, JSON.stringify(DB)); }
 function initDB() {
   const db = { ips: [], items: [], sales: [] };
 
-  // ── 초기 데이터: C&S 고양이와스프 ──
+  // ── IP 1: C&S 고양이와스프 ──
   db.ips.push({ id:'CS', name:'C&S 고양이와스프', color:'#0432FF', createdAt: now() });
-
   const csItems = [
     ['고양이와스프 마그넷(1)','마그넷',100,10000],
     ['고양이와스프 마그넷(2)','마그넷',100,10000],
@@ -454,6 +453,40 @@ function initDB() {
   ];
   csItems.forEach(([name,cat,stock,price]) => {
     db.items.push({ id:uid(), ipId:'CS', name, category:cat, initStock:stock, price, barcode:'', createdAt:now() });
+  });
+
+  // ── IP 2: 코렐라인 (Coraline × NOA) ──
+  db.ips.push({ id:'CORA', name:'코렐라인 × NOA', color:'#0F766E', createdAt: now() });
+  const coraItems = [
+    // 피규어
+    ['키링 피규어','피규어',100,35000],
+    ['디오라마 피규어_인형과나','피규어',350,35000],
+    ['디오라마 피규어_터널','피규어',400,35000],
+    ['디오라마 피규어_비밀의 문','피규어',500,35000],
+    // 키링·배지
+    ['메탈키링_코렐라인','키링',100,20000],
+    ['메탈키링_고양이','키링',100,20000],
+    ['메탈키링_열쇠','키링',100,20000],
+    ['메탈배지_마우스','배지',100,6000],
+    ['메탈배지_단추','배지',0,6000],
+    ['메탈배지_삼각돌','배지',0,6000],
+    ['메탈배지_장화','배지',0,6000],
+    ['메탈배지_펠리스사인','배지',0,6000],
+    ['메탈배지_잠자리','배지',0,6000],
+    // 생활용품
+    ['실리콘 코스터','생활용품',100,18000],
+    ['블랭킷','생활용품',100,42000],
+    ['입욕제','뷰티',10,15000],
+    // 문구·기타
+    ['3D 달력','문구',30,32000],
+    ['리무버블 스티커','문구',0,8000],
+    ['입체 3D 박스','문구',0,19000],
+    ['노벨티_DIY 스티커','노벨티',0,6000],
+    ['노벨티_핀버튼','노벨티',0,6000],
+    ['노벨티_북클립(3종)세트','노벨티',0,9000],
+  ];
+  coraItems.forEach(([name,cat,stock,price]) => {
+    db.items.push({ id:uid(), ipId:'CORA', name, category:cat, initStock:stock, price, barcode:'', createdAt:now() });
   });
 
   return db;
