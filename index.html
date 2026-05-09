@@ -385,6 +385,12 @@ tbody tr:hover td{background:#F8F9FF}
 
 <script>
 // ── Storage ───────────────────────────────────────────────────────────────────
+// ── Utils (먼저 선언 - initDB에서 사용) ──────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function now() { return new Date().toISOString(); }
+function $(id) { return document.getElementById(id); }
+function won(n) { return '₩' + Math.round(n).toLocaleString('ko-KR'); }
+
 const KEY = 'noa_inv_v2';
 let DB = load();
 
@@ -492,11 +498,6 @@ function initDB() {
   return db;
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-const now = () => new Date().toISOString();
-const won = n => '₩' + Math.round(n).toLocaleString('ko-KR');
-const $ = id => document.getElementById(id);
 
 function soldQty(itemId) {
   return DB.sales.filter(s => s.itemId === itemId).reduce((a,s) => a + s.qty, 0);
