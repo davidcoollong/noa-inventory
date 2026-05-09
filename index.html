@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>재고관리 대장</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',-apple-system,sans-serif;font-size:14px;background:#F3F4F6;color:#111;-webkit-font-smoothing:antialiased;letter-spacing:-0.01em}
+
+/* ── Nav ── */
+.nav{background:#0432FF;color:#fff;height:56px;display:flex;align-items:center;padding:0 28px;gap:0;position:sticky;top:0;z-index:200;box-shadow:0 2px 8px rgba(4,50,255,.25)}
+.nav-logo{font-size:15px;font-weight:700;letter-spacing:.06em;margin-right:36px;white-space:nowrap}
+.nav-tabs{display:flex;gap:2px;flex:1}
+.nav-tab{background:transparent;border:none;color:rgba(255,255,255,.6);font-family:'Pretendard',sans-serif;font-size:13px;font-weight:600;padding:8px 18px;border-radius:6px;cursor:pointer;transition:all .15s;letter-spacing:-.01em;white-space:nowrap}
+.nav-tab:hover{color:#fff;background:rgba(255,255,255,.12)}
+.nav-tab.active{color:#fff;background:rgba(255,255,255,.2)}
+.nav-right{display:flex;gap:8px;align-items:center}
+.btn{padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-family:'Pretendard',sans-serif;font-size:13px;font-weight:600;letter-spacing:-.01em;transition:all .15s}
+.btn:hover{opacity:.85}
+.btn-white{background:#fff;color:#0432FF}
+.btn-blue{background:#0432FF;color:#fff}
+.btn-outline{background:transparent;border:1px solid rgba(255,255,255,.4);color:#fff}
+.btn-sm{padding:4px 10px;font-size:12px;border-radius:4px}
+.btn-danger{background:#EF4444;color:#fff}
+.btn-success{background:#10B981;color:#fff}
+.btn-gray{background:#F3F4F6;color:#374151;border:1px solid #E5E7EB}
+
+/* ── Layout ── */
+.page{max-width:1200px;margin:28px auto;padding:0 20px 80px}
+.view{display:none}.view.active{display:block}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;margin-bottom:20px}
+.card-header{padding:14px 20px;border-bottom:1px solid #E5E7EB;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-title{font-size:14px;font-weight:700;color:#111;display:flex;align-items:center;gap:6px}
+.card-title .dot{width:8px;height:8px;border-radius:50%;background:#0432FF;flex-shrink:0}
+.card-body{padding:20px}
+
+/* ── Summary Strip ── */
+.summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.summary-card{background:#fff;border-radius:8px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid #0432FF}
+.summary-card.warn{border-left-color:#F59E0B}
+.summary-card.ok{border-left-color:#10B981}
+.summary-card.red{border-left-color:#EF4444}
+.summary-label{font-size:11px;font-weight:600;color:#6B7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.summary-val{font-size:26px;font-weight:700;color:#111;line-height:1}
+.summary-sub{font-size:11px;color:#9CA3AF;margin-top:4px}
+
+/* ── IP Cards Grid ── */
+.ip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:20px}
+.ip-card{background:#fff;border-radius:8px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-top:3px solid #0432FF;cursor:pointer;transition:box-shadow .15s}
+.ip-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.ip-card-name{font-size:15px;font-weight:700;margin-bottom:12px;color:#111}
+.ip-card-row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.ip-card-key{color:#6B7280}
+.ip-card-val{font-weight:600;color:#111}
+.stock-bar{height:5px;background:#E5E7EB;border-radius:3px;margin-top:10px;overflow:hidden}
+.stock-bar-fill{height:100%;border-radius:3px;background:#0432FF;transition:width .4s}
+.stock-bar-fill.warn{background:#F59E0B}
+.stock-bar-fill.danger{background:#EF4444}
+
+/* ── Table ── */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:#0432FF;color:#fff;padding:10px 12px;font-weight:600;white-space:nowrap;letter-spacing:-.01em}
+thead th:first-child{border-radius:0}
+tbody td{padding:9px 12px;border-bottom:1px solid #F0F2F5;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#F8F9FF}
+.ta-r{text-align:right}.ta-c{text-align:center}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-ok{background:#D1FAE5;color:#065F46}
+.badge-warn{background:#FEF3C7;color:#92400E}
+.badge-danger{background:#FEE2E2;color:#991B1B}
+.badge-blue{background:#EEF2FF;color:#3730A3}
+
+/* ── IP Tab Bar ── */
+.ip-tabbar{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:20px;align-items:center}
+.ip-tab{font-family:'Pretendard',sans-serif;font-size:13px;font-weight:600;padding:8px 18px;border:none;border-radius:6px;cursor:pointer;background:#E5E7EB;color:#6B7280;transition:all .15s;letter-spacing:-.01em}
+.ip-tab.active{background:#0432FF;color:#fff}
+.ip-tab:hover:not(.active){background:#D1D5DB;color:#374151}
+.ip-tab-add{background:transparent;border:2px dashed #D1D5DB;color:#9CA3AF;padding:6px 14px;font-size:13px;border-radius:6px;cursor:pointer;font-family:'Pretendard',sans-serif;font-weight:600;transition:all .15s}
+.ip-tab-add:hover{border-color:#0432FF;color:#0432FF}
+
+/* ── Forms ── */
+.form-grid{display:grid;gap:12px}
+.form-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px}
+.form-label{font-size:11px;font-weight:600;color:#6B7280;letter-spacing:.03em}
+.form-input,.form-select{font-family:'Pretendard',sans-serif;font-size:13px;padding:8px 12px;border:1px solid #E5E7EB;border-radius:6px;outline:none;background:#fff;color:#111;width:100%}
+.form-input:focus,.form-select:focus{border-color:#0432FF;box-shadow:0 0 0 2px rgba(4,50,255,.08)}
+.form-input::placeholder{color:#C4C9D4}
+
+/* ── Inline edit ── */
+.cell-edit{font-family:'Pretendard',sans-serif;font-size:12px;padding:4px 8px;border:1px solid transparent;border-radius:4px;background:transparent;outline:none;width:100%;color:#111}
+.cell-edit:focus{border-color:#0432FF;background:#fff}
+
+/* ── Modal ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:10px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px;color:#111}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:48px 20px;color:#9CA3AF;font-size:13px}
+.empty-icon{font-size:36px;margin-bottom:10px}
+
+/* ── Filter bar ── */
+.filter-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.filter-bar .form-input,.filter-bar .form-select{flex:1;min-width:130px;max-width:220px}
+
+/* ── Section title ── */
+.section-title{font-size:13px;font-weight:700;color:#111;display:flex;align-items:center;gap:6px;margin-bottom:14px}
+.section-title::before{content:'●';color:#0432FF}
+
+/* ── Stock status color ── */
+.stock-ok{color:#065F46;font-weight:700}
+.stock-warn{color:#92400E;font-weight:700}
+.stock-danger{color:#991B1B;font-weight:700}
+
+@media(max-width:700px){
+  .summary-strip{grid-template-columns:1fr 1fr}
+  .nav-logo{font-size:13px;margin-right:16px}
+  .nav-tab{padding:6px 10px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<div class="nav">
+  <div class="nav-logo">NOA&ARK · 재고관리</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('dashboard',this)">대시보드</button>
+    <button class="nav-tab" onclick="showView('ipmgr',this)">IP · 제품관리</button>
+    <button class="nav-tab" onclick="showView('sales',this)">판매기록</button>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-outline btn-sm" onclick="exportCSV()">CSV 내보내기</button>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ══════════════════════════════════════════
+     VIEW 1: DASHBOARD
+══════════════════════════════════════════ -->
+<div id="view-dashboard" class="view active">
+
+  <!-- Summary -->
+  <div class="summary-strip">
+    <div class="summary-card">
+      <div class="summary-label">운영 IP</div>
+      <div class="summary-val" id="s-ips">0</div>
+      <div class="summary-sub">개 IP 운영중</div>
+    </div>
+    <div class="summary-card ok">
+      <div class="summary-label">총 제품 종류</div>
+      <div class="summary-val" id="s-items">0</div>
+      <div class="summary-sub">개 SKU</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">총 재고 금액</div>
+      <div class="summary-val" id="s-value">₩0</div>
+      <div class="summary-sub">소비자가 기준</div>
+    </div>
+    <div class="summary-card red">
+      <div class="summary-label">부족 재고</div>
+      <div class="summary-val" id="s-low">0</div>
+      <div class="summary-sub">개 (재고 20% 이하)</div>
+    </div>
+  </div>
+
+  <!-- IP Cards -->
+  <div class="ip-grid" id="dash-ip-grid"></div>
+
+  <!-- Full Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="dot"></span>전체 재고 현황</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="form-select" id="dash-filter-ip" onchange="renderDashTable()" style="width:160px;padding:5px 10px;font-size:12px">
+          <option value="">전체 IP</option>
+        </select>
+        <input class="form-input" id="dash-search" placeholder="제품명 검색..." oninput="renderDashTable()" style="width:180px;padding:5px 10px;font-size:12px">
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="tbl-wrap">
+        <table id="dash-table">
+          <thead><tr>
+            <th>IP</th><th>제품명</th><th class="ta-c">초기재고</th>
+            <th class="ta-c">판매수량</th><th class="ta-c">현재재고</th>
+            <th class="ta-r">소비자가</th><th class="ta-r">재고금액</th><th class="ta-c">상태</th>
+          </tr></thead>
+          <tbody id="dash-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW 2: IP · 제품관리
+══════════════════════════════════════════ -->
+<div id="view-ipmgr" class="view">
+
+  <div class="ip-tabbar" id="ip-tabbar">
+    <button class="ip-tab-add" onclick="openIPModal()">+ IP 추가</button>
+  </div>
+
+  <div id="ip-content">
+    <div class="empty"><div class="empty-icon">📦</div>IP를 추가해 제품을 관리하세요.</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VIEW 3: 판매기록
+══════════════════════════════════════════ -->
+<div id="view-sales" class="view">
+
+  <!-- Add sale form -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="dot"></span>판매 기록 추가</div>
+    </div>
+    <div class="card-body">
+      <div class="form-row">
+        <div class="form-group" style="max-width:150px">
+          <label class="form-label">판매일</label>
+          <input class="form-input" type="date" id="sale-date">
+        </div>
+        <div class="form-group" style="max-width:180px">
+          <label class="form-label">IP 선택</label>
+          <select class="form-select" id="sale-ip" onchange="updateSaleItems()">
+            <option value="">— IP 선택 —</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width:260px">
+          <label class="form-label">제품 선택</label>
+          <select class="form-select" id="sale-item">
+            <option value="">— 제품 선택 —</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width:180px">
+          <label class="form-label">판매처</label>
+          <input class="form-input" id="sale-channel" placeholder="예: 경콘진, 온라인몰">
+        </div>
+        <div class="form-group" style="max-width:100px">
+          <label class="form-label">수량</label>
+          <input class="form-input" type="number" id="sale-qty" min="1" placeholder="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">메모</label>
+          <input class="form-input" id="sale-memo" placeholder="선택사항">
+        </div>
+        <div class="form-group" style="max-width:80px">
+          <label class="form-label">&nbsp;</label>
+          <button class="btn btn-blue" onclick="addSale()">기록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><span class="dot"></span>판매 내역</div>
+      <div class="filter-bar" style="margin:0">
+        <select class="form-select" id="sf-ip" onchange="renderSalesTable()" style="width:150px;padding:5px 10px;font-size:12px">
+          <option value="">전체 IP</option>
+        </select>
+        <input class="form-input" id="sf-channel" placeholder="판매처 검색" oninput="renderSalesTable()" style="width:150px;padding:5px 10px;font-size:12px">
+        <input class="form-input" id="sf-search" placeholder="제품명 검색" oninput="renderSalesTable()" style="width:150px;padding:5px 10px;font-size:12px">
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>날짜</th><th>IP</th><th>제품명</th>
+            <th>판매처</th><th class="ta-c">수량</th><th>메모</th><th></th>
+          </tr></thead>
+          <tbody id="sales-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+
+<!-- ══ Modal: Add IP ══ -->
+<div class="modal-bg" id="modal-ip">
+  <div class="modal">
+    <div class="modal-title" id="modal-ip-title">새 IP 추가</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">IP 코드 (영문, 공백 없이)</label>
+        <input class="form-input" id="ip-code" placeholder="예: CS, NWIZ, SANRIO">
+      </div>
+      <div class="form-group">
+        <label class="form-label">IP 이름</label>
+        <input class="form-input" id="ip-name" placeholder="예: C&S 고양이와스프">
+      </div>
+      <div class="form-group">
+        <label class="form-label">브랜드 색상</label>
+        <input class="form-input" type="color" id="ip-color" value="#0432FF" style="height:40px;padding:4px">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeModal('modal-ip')">취소</button>
+      <button class="btn btn-blue" onclick="saveIP()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Add Item ══ -->
+<div class="modal-bg" id="modal-item">
+  <div class="modal">
+    <div class="modal-title">제품 추가</div>
+    <input type="hidden" id="item-ipid">
+    <input type="hidden" id="item-edit-id">
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">제품명</label>
+          <input class="form-input" id="item-name" placeholder="예: 고양이와스프 마그넷(1)">
+        </div>
+        <div class="form-group" style="max-width:120px">
+          <label class="form-label">카테고리</label>
+          <input class="form-input" id="item-cat" placeholder="예: 마그넷">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">초기 재고수량</label>
+          <input class="form-input" type="number" id="item-stock" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">소비자가 (원)</label>
+          <input class="form-input" type="number" id="item-price" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">바코드</label>
+          <input class="form-input" id="item-barcode" placeholder="선택사항">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeModal('modal-item')">취소</button>
+      <button class="btn btn-blue" onclick="saveItem()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal: Restock ══ -->
+<div class="modal-bg" id="modal-restock">
+  <div class="modal">
+    <div class="modal-title">재고 수정</div>
+    <input type="hidden" id="restock-id">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">제품명</label>
+        <div id="restock-name" style="font-weight:700;font-size:14px;padding:8px 0"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">현재 초기재고</label>
+        <div id="restock-cur" style="color:#6B7280;font-size:13px;padding:4px 0"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">새 초기재고 수량</label>
+        <input class="form-input" type="number" id="restock-qty" min="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeModal('modal-restock')">취소</button>
+      <button class="btn btn-blue" onclick="saveRestock()">수정</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Storage ───────────────────────────────────────────────────────────────────
+const KEY = 'noa_inv_v1';
+let DB = load();
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || initDB(); }
+  catch { return initDB(); }
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(DB)); }
+
+function initDB() {
+  const db = { ips: [], items: [], sales: [] };
+
+  // ── 초기 데이터: C&S 고양이와스프 ──
+  db.ips.push({ id:'CS', name:'C&S 고양이와스프', color:'#0432FF', createdAt: now() });
+
+  const csItems = [
+    ['고양이와스프 마그넷(1)','마그넷',100,10000],
+    ['고양이와스프 마그넷(2)','마그넷',100,10000],
+    ['고양이와스프 마그넷(3)','마그넷',100,10000],
+    ['고양이와스프 마그넷(4)','마그넷',100,10000],
+    ['고양이와스프 마그넷(5)','마그넷',100,10000],
+    ['고양이와스프 마그넷(6)','마그넷',100,10000],
+    ['고양이와스프 스티커(1)','스티커',200,4000],
+    ['고양이와스프 스티커(2)','스티커',200,4000],
+    ['고양이와스프 실리콘키링(1)','키링',200,10000],
+    ['고양이와스프 실리콘키링(2)','키링',200,10000],
+    ['고양이와스프 실리콘키링(3)','키링',200,10000],
+    ['고양이와스프 실리콘키링(4)','키링',200,10000],
+    ['고양이와스프 대노트(1)','노트',100,6000],
+    ['고양이와스프 대노트(2)','노트',100,6000],
+    ['고양이와스프 대노트(3)','노트',100,6000],
+    ['고양이와스프 대노트(4)','노트',100,6000],
+    ['고양이와스프 소노트(1)','노트',100,5000],
+    ['고양이와스프 소노트(2)','노트',100,5000],
+    ['고양이와스프 소노트(3)','노트',100,5000],
+    ['고양이와스프 메모지(1)','메모지',100,4000],
+    ['고양이와스프 메모지(2)','메모지',100,4000],
+    ['고양이와스프 메모지(3)','메모지',100,4000],
+    ['고양이와스프 메모지(4)','메모지',100,4000],
+    ['고양이와스프 에코백(1)','에코백',100,14000],
+    ['고양이와스프 에코백(2)','에코백',100,14000],
+    ['고양이와스프 빅타올(1)','타올',100,25000],
+    ['고양이와스프 빅타올(2)','타올',100,25000],
+    ['타투 스티커','스티커',500,4000],
+    ['베스밤','기타',100,19000],
+    ['BxC 콜라보 빅백','콜라보백',50,51000],
+    ['BxC 콜라보 미디엄백','콜라보백',50,44500],
+    ['BxC 콜라보 토트백','콜라보백',50,33500],
+    ['BxC 콜라보 크로스백','콜라보백',50,44500],
+    ['르아위_티셔츠(1)','티셔츠',50,59000],
+    ['르아위_티셔츠(2)','티셔츠',50,59000],
+    ['르아위_티셔츠(3)','티셔츠',50,64000],
+    ['르아위_티셔츠(4)','티셔츠',50,64000],
+    ['르아위_티셔츠(5)','티셔츠',50,57000],
+    ['르아위_티셔츠(6)','티셔츠',50,57000],
+    ['르아위_티셔츠(7)','티셔츠',50,85500],
+    ['르아위_티셔츠(8)','티셔츠',50,99000],
+    ['르아위_티셔츠(9)','티셔츠',50,99000],
+    ['르아위_티셔츠(10)','티셔츠',50,85500],
+    ['르아위_티셔츠(11)','티셔츠',50,85500],
+    ['르아위_티셔츠(12)','티셔츠',50,79000],
+    ['르아위_티셔츠(13)','티셔츠',50,79000],
+    ['르아위_티셔츠(14)','티셔츠',50,57000],
+    ['르아위_티셔츠(15)','티셔츠',50,57000],
+    ['르아위_티셔츠(16)','티셔츠',50,57000],
+    ['르아위_티셔츠(17)','티셔츠',50,57000],
+  ];
+  csItems.forEach(([name,cat,stock,price]) => {
+    db.items.push({ id:uid(), ipId:'CS', name, category:cat, initStock:stock, price, barcode:'', createdAt:now() });
+  });
+
+  return db;
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const now = () => new Date().toISOString();
+const won = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const $ = id => document.getElementById(id);
+
+function soldQty(itemId) {
+  return DB.sales.filter(s => s.itemId === itemId).reduce((a,s) => a + s.qty, 0);
+}
+function currentStock(item) { return item.initStock - soldQty(item.id); }
+function stockPct(item) { return item.initStock > 0 ? currentStock(item) / item.initStock : 0; }
+function stockStatus(item) {
+  const pct = stockPct(item);
+  if (pct <= 0) return 'out';
+  if (pct <= 0.2) return 'danger';
+  if (pct <= 0.4) return 'warn';
+  return 'ok';
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+function showView(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  $('view-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'ipmgr') renderIPMgr();
+  if (name === 'sales') renderSalesView();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDashboard() {
+  const totalVal = DB.items.reduce((a,it) => a + currentStock(it) * it.price, 0);
+  const lowCount = DB.items.filter(it => stockStatus(it) === 'danger' || stockStatus(it) === 'out').length;
+
+  $('s-ips').textContent   = DB.ips.length;
+  $('s-items').textContent = DB.items.length;
+  $('s-value').textContent = won(totalVal);
+  $('s-low').textContent   = lowCount;
+
+  // IP filter dropdowns
+  const ipOpts = '<option value="">전체 IP</option>' + DB.ips.map(ip => `<option value="${ip.id}">${ip.name}</option>`).join('');
+  $('dash-filter-ip').innerHTML = ipOpts;
+
+  // IP Cards
+  const grid = $('dash-ip-grid');
+  grid.innerHTML = '';
+  DB.ips.forEach(ip => {
+    const ipItems = DB.items.filter(it => it.ipId === ip.id);
+    const ipVal = ipItems.reduce((a,it) => a + currentStock(it) * it.price, 0);
+    const ipSold = ipItems.reduce((a,it) => a + soldQty(it.id), 0);
+    const ipStock = ipItems.reduce((a,it) => a + currentStock(it), 0);
+    const ipInit = ipItems.reduce((a,it) => a + it.initStock, 0);
+    const pct = ipInit > 0 ? ipStock / ipInit : 0;
+    const pctClass = pct <= 0.2 ? 'danger' : pct <= 0.4 ? 'warn' : '';
+    const div = document.createElement('div');
+    div.className = 'ip-card';
+    div.style.borderTopColor = ip.color;
+    div.onclick = () => {
+      $('dash-filter-ip').value = ip.id;
+      renderDashTable();
+      $('dash-filter-ip').scrollIntoView({ behavior:'smooth', block:'center' });
+    };
+    div.innerHTML = `
+      <div class="ip-card-name">${ip.name}</div>
+      <div class="ip-card-row"><span class="ip-card-key">총 SKU</span><span class="ip-card-val">${ipItems.length}종</span></div>
+      <div class="ip-card-row"><span class="ip-card-key">현재 재고</span><span class="ip-card-val">${ipStock.toLocaleString()}개</span></div>
+      <div class="ip-card-row"><span class="ip-card-key">누적 판매</span><span class="ip-card-val">${ipSold.toLocaleString()}개</span></div>
+      <div class="ip-card-row"><span class="ip-card-key">재고 금액</span><span class="ip-card-val">${won(ipVal)}</span></div>
+      <div class="stock-bar"><div class="stock-bar-fill ${pctClass}" style="width:${Math.round(pct*100)}%"></div></div>
+    `;
+    grid.appendChild(div);
+  });
+
+  renderDashTable();
+}
+
+function renderDashTable() {
+  const filterIP  = $('dash-filter-ip').value;
+  const search    = ($('dash-search').value || '').trim().toLowerCase();
+  const tbody     = $('dash-tbody');
+
+  let rows = DB.items.filter(it => {
+    if (filterIP && it.ipId !== filterIP) return false;
+    if (search && !it.name.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">해당하는 제품이 없습니다.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(it => {
+    const ip     = DB.ips.find(x => x.id === it.ipId);
+    const sold   = soldQty(it.id);
+    const cur    = currentStock(it);
+    const val    = cur * it.price;
+    const st     = stockStatus(it);
+    const badge  = st === 'ok' ? 'badge-ok' : st === 'warn' ? 'badge-warn' : 'badge-danger';
+    const label  = st === 'ok' ? '정상' : st === 'warn' ? '주의' : cur <= 0 ? '소진' : '부족';
+    const curCls = st === 'ok' ? 'stock-ok' : st === 'warn' ? 'stock-warn' : 'stock-danger';
+    return `<tr>
+      <td><span class="badge badge-blue">${ip ? ip.name : it.ipId}</span></td>
+      <td>${it.name}${it.category ? ` <span style="font-size:11px;color:#9CA3AF">[${it.category}]</span>` : ''}</td>
+      <td class="ta-c">${it.initStock.toLocaleString()}</td>
+      <td class="ta-c">${sold.toLocaleString()}</td>
+      <td class="ta-c ${curCls}">${cur.toLocaleString()}</td>
+      <td class="ta-r">${won(it.price)}</td>
+      <td class="ta-r">${won(val)}</td>
+      <td class="ta-c"><span class="badge ${badge}">${label}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── IP MANAGER ────────────────────────────────────────────────────────────────
+let curIPId = DB.ips[0]?.id || null;
+
+function renderIPMgr() {
+  const tabbar = $('ip-tabbar');
+  tabbar.innerHTML = DB.ips.map(ip =>
+    `<button class="ip-tab${ip.id === curIPId ? ' active' : ''}" onclick="switchIP('${ip.id}',this)" style="${ip.id===curIPId?'background:'+ip.color:''}">
+      ${ip.name}
+      <span onclick="event.stopPropagation();deleteIP('${ip.id}')" style="margin-left:8px;opacity:.6;font-size:11px">✕</span>
+    </button>`
+  ).join('') + `<button class="ip-tab-add" onclick="openIPModal()">+ IP 추가</button>`;
+
+  renderIPContent();
+}
+
+function switchIP(id, btn) {
+  curIPId = id;
+  document.querySelectorAll('.ip-tab').forEach(t => {
+    t.classList.remove('active');
+    t.style.background = '';
+  });
+  btn.classList.add('active');
+  const ip = DB.ips.find(x=>x.id===id);
+  if (ip) btn.style.background = ip.color;
+  renderIPContent();
+}
+
+function renderIPContent() {
+  const cont = $('ip-content');
+  if (!curIPId) {
+    cont.innerHTML = '<div class="empty"><div class="empty-icon">📦</div>IP를 선택하거나 추가하세요.</div>';
+    return;
+  }
+  const ip = DB.ips.find(x=>x.id===curIPId);
+  const items = DB.items.filter(it=>it.ipId===curIPId);
+
+  cont.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><span class="dot" style="background:${ip.color}"></span>${ip.name} 제품 목록 (${items.length}종)</div>
+        <button class="btn btn-blue btn-sm" onclick="openItemModal('${curIPId}')">+ 제품 추가</button>
+      </div>
+      <div class="card-body" style="padding:0">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr>
+              <th>카테고리</th><th>제품명</th>
+              <th class="ta-c">초기재고</th><th class="ta-c">판매수량</th>
+              <th class="ta-c">현재재고</th><th class="ta-r">소비자가</th>
+              <th class="ta-r">재고금액</th><th class="ta-c">상태</th><th></th>
+            </tr></thead>
+            <tbody>${items.length ? items.map(it => {
+              const sold = soldQty(it.id);
+              const cur  = currentStock(it);
+              const st   = stockStatus(it);
+              const badge = st==='ok'?'badge-ok':st==='warn'?'badge-warn':'badge-danger';
+              const label = st==='ok'?'정상':st==='warn'?'주의':cur<=0?'소진':'부족';
+              const curCls = st==='ok'?'stock-ok':st==='warn'?'stock-warn':'stock-danger';
+              return `<tr>
+                <td><span style="font-size:11px;color:#6B7280">${it.category||'-'}</span></td>
+                <td style="font-weight:600">${it.name}</td>
+                <td class="ta-c">${it.initStock.toLocaleString()}</td>
+                <td class="ta-c">${sold.toLocaleString()}</td>
+                <td class="ta-c ${curCls}">${cur.toLocaleString()}</td>
+                <td class="ta-r">${won(it.price)}</td>
+                <td class="ta-r">${won(cur*it.price)}</td>
+                <td class="ta-c"><span class="badge ${badge}">${label}</span></td>
+                <td class="ta-c" style="white-space:nowrap">
+                  <button class="btn btn-gray btn-sm" onclick="openRestock('${it.id}')" style="margin-right:4px">재고수정</button>
+                  <button class="btn btn-sm" style="background:#FEF3C7;color:#92400E" onclick="openItemEdit('${it.id}')">수정</button>
+                  <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteItem('${it.id}')">삭제</button>
+                </td>
+              </tr>`;
+            }).join('') : '<tr><td colspan="9" class="empty">제품을 추가해주세요.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ── SALES ─────────────────────────────────────────────────────────────────────
+function renderSalesView() {
+  const today = new Date().toISOString().slice(0,10);
+  $('sale-date').value = today;
+
+  const ipOpts = '<option value="">— IP 선택 —</option>' + DB.ips.map(ip=>`<option value="${ip.id}">${ip.name}</option>`).join('');
+  $('sale-ip').innerHTML = ipOpts;
+  $('sale-item').innerHTML = '<option value="">— 제품 선택 —</option>';
+
+  const fOpts = '<option value="">전체 IP</option>' + DB.ips.map(ip=>`<option value="${ip.id}">${ip.name}</option>`).join('');
+  $('sf-ip').innerHTML = fOpts;
+
+  renderSalesTable();
+}
+
+function updateSaleItems() {
+  const ipId = $('sale-ip').value;
+  const items = DB.items.filter(it=>it.ipId===ipId);
+  $('sale-item').innerHTML = '<option value="">— 제품 선택 —</option>' +
+    items.map(it=>`<option value="${it.id}">${it.name} (재고: ${currentStock(it)})</option>`).join('');
+}
+
+function addSale() {
+  const date    = $('sale-date').value;
+  const ipId    = $('sale-ip').value;
+  const itemId  = $('sale-item').value;
+  const channel = $('sale-channel').value.trim();
+  const qty     = parseInt($('sale-qty').value);
+  const memo    = $('sale-memo').value.trim();
+
+  if (!date || !ipId || !itemId || !channel || !qty || qty < 1) {
+    alert('날짜, IP, 제품, 판매처, 수량을 모두 입력해주세요.'); return;
+  }
+  const item = DB.items.find(x=>x.id===itemId);
+  if (!item) return;
+  if (currentStock(item) < qty) {
+    alert(`재고 부족! 현재 재고: ${currentStock(item)}개`); return;
+  }
+  DB.sales.push({ id:uid(), date, ipId, itemId, itemName:item.name, channel, qty, memo, createdAt:now() });
+  save();
+  $('sale-qty').value = '';
+  $('sale-memo').value = '';
+  renderSalesTable();
+  updateSaleItems();
+}
+
+function renderSalesTable() {
+  const filterIP  = $('sf-ip').value;
+  const filterCh  = ($('sf-channel').value||'').trim().toLowerCase();
+  const search    = ($('sf-search').value||'').trim().toLowerCase();
+
+  let rows = [...DB.sales].filter(s => {
+    if (filterIP && s.ipId !== filterIP) return false;
+    if (filterCh && !s.channel.toLowerCase().includes(filterCh)) return false;
+    if (search && !s.itemName.toLowerCase().includes(search)) return false;
+    return true;
+  }).sort((a,b) => b.date.localeCompare(a.date));
+
+  const tbody = $('sales-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">판매 기록이 없습니다.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(s => {
+    const ip = DB.ips.find(x=>x.id===s.ipId);
+    return `<tr>
+      <td>${s.date}</td>
+      <td><span class="badge badge-blue">${ip?ip.name:s.ipId}</span></td>
+      <td style="font-weight:600">${s.itemName}</td>
+      <td>${s.channel}</td>
+      <td class="ta-c">${s.qty.toLocaleString()}</td>
+      <td style="color:#6B7280">${s.memo||'-'}</td>
+      <td class="ta-c"><button class="btn btn-danger btn-sm" onclick="deleteSale('${s.id}')">삭제</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function deleteSale(id) {
+  if (!confirm('이 판매 기록을 삭제하시겠습니까?')) return;
+  DB.sales = DB.sales.filter(s=>s.id!==id);
+  save(); renderSalesTable();
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+
+function openIPModal() {
+  $('ip-code').value = '';
+  $('ip-name').value = '';
+  $('ip-color').value = '#0432FF';
+  $('modal-ip-title').textContent = '새 IP 추가';
+  openModal('modal-ip');
+}
+
+function saveIP() {
+  const code = $('ip-code').value.trim().toUpperCase().replace(/\s/g,'');
+  const name = $('ip-name').value.trim();
+  const color = $('ip-color').value;
+  if (!code || !name) { alert('코드와 이름을 입력해주세요.'); return; }
+  if (DB.ips.find(x=>x.id===code)) { alert('이미 존재하는 IP 코드입니다.'); return; }
+  DB.ips.push({ id:code, name, color, createdAt:now() });
+  curIPId = code;
+  save(); closeModal('modal-ip'); renderIPMgr();
+}
+
+function deleteIP(id) {
+  const ip = DB.ips.find(x=>x.id===id);
+  if (!confirm(`"${ip?.name}" IP를 삭제하시겠습니까?\n관련 제품과 판매기록도 모두 삭제됩니다.`)) return;
+  DB.ips    = DB.ips.filter(x=>x.id!==id);
+  DB.items  = DB.items.filter(x=>x.ipId!==id);
+  DB.sales  = DB.sales.filter(x=>x.ipId!==id);
+  curIPId = DB.ips[0]?.id || null;
+  save(); renderIPMgr();
+}
+
+function openItemModal(ipId) {
+  $('item-ipid').value = ipId;
+  $('item-edit-id').value = '';
+  $('item-name').value = '';
+  $('item-cat').value = '';
+  $('item-stock').value = '';
+  $('item-price').value = '';
+  $('item-barcode').value = '';
+  openModal('modal-item');
+}
+
+function openItemEdit(itemId) {
+  const it = DB.items.find(x=>x.id===itemId);
+  if (!it) return;
+  $('item-ipid').value = it.ipId;
+  $('item-edit-id').value = it.id;
+  $('item-name').value = it.name;
+  $('item-cat').value = it.category||'';
+  $('item-stock').value = it.initStock;
+  $('item-price').value = it.price;
+  $('item-barcode').value = it.barcode||'';
+  openModal('modal-item');
+}
+
+function saveItem() {
+  const ipId    = $('item-ipid').value;
+  const editId  = $('item-edit-id').value;
+  const name    = $('item-name').value.trim();
+  const cat     = $('item-cat').value.trim();
+  const stock   = parseInt($('item-stock').value);
+  const price   = parseInt($('item-price').value);
+  const barcode = $('item-barcode').value.trim();
+  if (!name || isNaN(stock) || isNaN(price)) { alert('제품명, 초기재고, 소비자가를 입력해주세요.'); return; }
+
+  if (editId) {
+    const it = DB.items.find(x=>x.id===editId);
+    if (it) { it.name=name; it.category=cat; it.initStock=stock; it.price=price; it.barcode=barcode; }
+  } else {
+    DB.items.push({ id:uid(), ipId, name, category:cat, initStock:stock, price, barcode, createdAt:now() });
+  }
+  save(); closeModal('modal-item'); renderIPContent();
+}
+
+function deleteItem(id) {
+  const it = DB.items.find(x=>x.id===id);
+  if (!confirm(`"${it?.name}"을(를) 삭제하시겠습니까?\n관련 판매기록도 삭제됩니다.`)) return;
+  DB.items = DB.items.filter(x=>x.id!==id);
+  DB.sales = DB.sales.filter(x=>x.itemId!==id);
+  save(); renderIPContent();
+}
+
+function openRestock(itemId) {
+  const it = DB.items.find(x=>x.id===itemId);
+  $('restock-id').value = itemId;
+  $('restock-name').textContent = it.name;
+  $('restock-cur').textContent = `현재 초기재고: ${it.initStock}개 / 현재고: ${currentStock(it)}개`;
+  $('restock-qty').value = it.initStock;
+  openModal('modal-restock');
+}
+
+function saveRestock() {
+  const id  = $('restock-id').value;
+  const qty = parseInt($('restock-qty').value);
+  if (isNaN(qty) || qty < 0) { alert('올바른 수량을 입력해주세요.'); return; }
+  const it = DB.items.find(x=>x.id===id);
+  if (it) it.initStock = qty;
+  save(); closeModal('modal-restock'); renderIPContent();
+}
+
+// ── Export ────────────────────────────────────────────────────────────────────
+function exportCSV() {
+  const rows = [['IP','제품명','카테고리','초기재고','판매수량','현재재고','소비자가','재고금액','상태']];
+  DB.items.forEach(it => {
+    const ip   = DB.ips.find(x=>x.id===it.ipId);
+    const sold = soldQty(it.id);
+    const cur  = currentStock(it);
+    const st   = stockStatus(it);
+    rows.push([ip?.name||it.ipId, it.name, it.category||'', it.initStock, sold, cur, it.price, cur*it.price, st]);
+  });
+  const csv = rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
+  a.download = `재고현황_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ── Close modal on bg click ───────────────────────────────────────────────────
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if(e.target===bg) bg.classList.remove('open'); });
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderDashboard();
+</script>
+</body>
+</html>
